@@ -25,8 +25,10 @@ Qwen3.5 の **マルチモーダル推論（画像 + テキスト）** を、**v
 
 - `notebooks/01_qwen35_vllm_basic_hands_on.ipynb`
   - vLLM + GPU で `Qwen/Qwen3.5-2B` を使い、画像 + テキスト推論を行う基本編
+  - **実際に動いた Python コードをセルに分解した Notebook**
 - `notebooks/02_qwen35_vllm_prefix_caching_hands_on.ipynb`
   - vLLM の `enable_prefix_caching=True` を使い、画像を含む共有prefixの再利用を確認する編
+  - **`.py` を呼ぶだけではなく、APC 検証コード本体をセル化した Notebook**
 
 ### 実行スクリプト
 
@@ -161,7 +163,7 @@ bash scripts/run_vllm_qwen35_server.sh
 uv run jupyter lab
 ```
 
-開いたら以下を順に実行してください。
+開いたら kernel を **`Python (.venv-vllm qwen35)`** に切り替えて、以下を順に実行してください。
 
 - `notebooks/01_qwen35_vllm_basic_hands_on.ipynb`
 - `notebooks/02_qwen35_vllm_prefix_caching_hands_on.ipynb`
