@@ -2,7 +2,11 @@ AGENTS.md
 TOOLS.md
 skills
 .venv/
+.venv-vllm/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
 notebooks/*.executed.ipynb
+local/
+tmp/
+*.so

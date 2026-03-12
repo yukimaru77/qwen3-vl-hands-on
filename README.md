@@ -1,84 +1,195 @@
-# qwen3-vl-hands-on
+# qwen3.5-vllm-hands-on
 
-Qwen系VLMを **Hugging Face + Transformers** で実行し、
+Qwen3.5 の **マルチモーダル推論（画像 + テキスト）** を、**vLLM + GPU** で実行し、さらに **Automatic Prefix Caching (APC)** による共有prefix再利用まで確認できるハンズオンリポジトリです。
 
-1. **画像 + テキスト入力の基本推論**
-2. **同じ画像を共有prefixとして再利用する KV cache 実装**
+このリポジトリでは、以下をまとめています。
 
-を、**ハンズオン形式のJupyter Notebook** と **実行用スクリプト** にまとめたリポジトリです。
+1. **Qwen3.5 を vLLM 上で GPU 推論する方法**
+2. **画像 + テキスト入力の最小実行例**
+3. **画像を含む共通prefixに対する APC / KV cache 再利用の確認**
+4. **Jupyter Notebook での分かりやすいハンズオン化**
 
-> 注意: ユーザー依頼では「Qwen3.5 のVLM」とありましたが、Hugging Faceでの公開名として画像+テキスト入力のVLM系列は `Qwen3-VL-*` です。本リポジトリでは `Qwen/Qwen3-VL-2B-Instruct` を使用しています。
+## 重要な前提
 
-## できること
+今回対象としているのは **`Qwen/Qwen3.5-2B`** です。
 
-- `Qwen/Qwen3-VL-2B-Instruct` で画像+テキスト推論を動かす
-- `AutoModelForImageTextToText` / `AutoProcessor` の最小構成を理解する
-- 共有のマルチモーダルprefixを一度だけprefillし、`past_key_values` を再利用する
-- 学習用に読みやすいNotebookとして手順を追える
+> ポイント: `Qwen3.5` は `-VL` が付いていなくても、**そのままマルチモーダルモデル** です。
 
-## 主要ファイル
+そのため、画像 + テキスト入力では `Qwen3-VL` ではなく、**`Qwen3.5-*` 自体** を使っています。
 
-- `notebooks/01_qwen3_vl_basic_hands_on.ipynb`
-  - 画像+テキスト推論の基本ハンズオン
-- `notebooks/02_qwen3_vl_kv_cache_hands_on.ipynb`
-  - 画像+テキスト入力での KV cache ハンズオン
-- `scripts/basic_inference.py`
-  - 最小の基本推論スクリプト
-- `scripts/kv_cache_demo.py`
-  - 共有画像prefixをKV cacheで再利用する実演スクリプト
-- `data/demo.jpeg`
-  - Qwen公式サンプル画像
+---
 
-## 実行環境
+## 完成物
 
-- Python 3.12
-- `uv` による依存管理
-- `transformers` は GitHub最新版を利用
-  - `Qwen3-VL` サポートが新しいため
+### Notebooks
+
+- `notebooks/01_qwen35_vllm_basic_hands_on.ipynb`
+  - vLLM + GPU で `Qwen/Qwen3.5-2B` を使い、画像 + テキスト推論を行う基本編
+- `notebooks/02_qwen35_vllm_prefix_caching_hands_on.ipynb`
+  - vLLM の `enable_prefix_caching=True` を使い、画像を含む共有prefixの再利用を確認する編
+
+### 実行スクリプト
+
+- `scripts/test_vllm_qwen35_mm_offline.py`
+  - vLLM の offline inference で Qwen3.5 マルチモーダル推論を行う最小例
+- `scripts/test_vllm_qwen35_prefix_cache.py`
+  - APC を有効化して、同じ画像つきprefixの再利用を確認するスクリプト
+- `scripts/run_vllm_qwen35_server.sh`
+  - OpenAI-compatible server として vLLM を起動するためのスクリプト
+- `scripts/qwen35_vllm_openai_client.py`
+  - vLLM OpenAI-compatible endpoint に画像 + テキストを投げるクライアント例
+- `scripts/qwen35_transformers_gpu.py`
+  - 比較用の Transformers + GPU 実行例
+
+---
+
+## 動作確認済み内容
+
+この作業では、以下を **実際に確認済み** です。
+
+### 1. Qwen3.5 はマルチモーダル
+
+- `Qwen/Qwen3.5-2B` を使用
+- `AutoProcessor` に画像を渡せる
+- 画像 + テキスト入力の推論が可能
+
+### 2. GPU で実行可能
+
+- `torch.cuda.is_available() == True`
+- GPU: `NVIDIA GB10`
+- CUDA: `13.0`
+- `Qwen/Qwen3.5-2B` を **GPU 上で実行** 済み
+
+### 3. vLLM 上でも Qwen3.5 マルチモーダル推論を実行
+
+- arm64 + CUDA 13 + GB10 環境で、vLLM を **source build** を含めて調整
+- `Qwen/Qwen3.5-2B` の **画像 + テキスト入力**を vLLM + GPU で実行
+
+### 4. Prefix Caching / KV cache 再利用の効果を確認
+
+`enable_prefix_caching=True` で、同じ画像を含む共通prefixを持つ2リクエストを連続実行した結果:
+
+- 1回目: **47.6 秒**
+- 2回目: **2.63 秒**
+
+つまり、**画像を含む共有prefixでも vLLM の APC による再利用が効く** ことを確認しています。
+
+---
+
+## 環境
+
+- OS: Linux (arm64)
+- Python: 3.12
+- GPU: NVIDIA GB10
+- CUDA: 13.0
+- パッケージ管理: `uv`
+
+### Python 環境の使い分け
+
+このリポジトリでは2つのPython環境を使っています。
+
+- `.venv`
+  - Notebook生成や補助用途
+- `.venv-vllm`
+  - **vLLM + CUDA + Qwen3.5 実行専用**
+
+vLLM 関連は **`.venv-vllm` を使う前提** です。
+
+---
 
 ## セットアップ
+
+### 通常環境
 
 ```bash
 uv sync
 ```
 
+### vLLM 実行環境
+
+この作業では arm64 + CUDA 13 + GB10 の都合で、vLLM はかなり特殊な調整を行いました。
+そのため、このリポジトリの再現では **既存の `.venv-vllm` をそのまま使う前提** が一番簡単です。
+
+もし同じ作業を一から再現したい場合は、以下の要素が必要になります。
+
+- CUDA 13 対応の PyTorch nightly
+- vLLM nightly / source build
+- Python headers
+- FlashAttention 系の追加ビルド
+
+この環境依存部分はかなり強いため、READMEでは **利用方法中心** に記載します。
+
+---
+
 ## 実行方法
 
-### 1) 基本の画像+テキスト推論
+### 1. vLLM offline inference で基本推論
 
 ```bash
-uv run python scripts/basic_inference.py
+/project/.venv-vllm/bin/python scripts/test_vllm_qwen35_mm_offline.py
 ```
 
-### 2) KV cache デモ
+### 2. Prefix caching の確認
 
 ```bash
-uv run python scripts/kv_cache_demo.py
+/project/.venv-vllm/bin/python scripts/test_vllm_qwen35_prefix_cache.py
 ```
 
-### 3) Notebook を開く
+### 3. OpenAI-compatible server を起動
+
+```bash
+bash scripts/run_vllm_qwen35_server.sh
+```
+
+別ターミナルからクライアントを実行:
+
+```bash
+/project/.venv-vllm/bin/python scripts/qwen35_vllm_openai_client.py
+```
+
+### 4. Notebook を開く
 
 ```bash
 uv run jupyter lab
 ```
 
-開いたら以下を順番に実行してください。
+開いたら以下を順に実行してください。
 
-- `notebooks/01_qwen3_vl_basic_hands_on.ipynb`
-- `notebooks/02_qwen3_vl_kv_cache_hands_on.ipynb`
+- `notebooks/01_qwen35_vllm_basic_hands_on.ipynb`
+- `notebooks/02_qwen35_vllm_prefix_caching_hands_on.ipynb`
 
-## 検証済みコマンド
+---
 
-この作業中に以下を実行して動作確認しました。
+## Notebook 実行確認
+
+この作業中に以下を実行し、Notebook の自動実行確認も行っています。
 
 ```bash
-uv run python scripts/basic_inference.py
-uv run python scripts/kv_cache_demo.py
-uv run jupyter nbconvert --to notebook --execute notebooks/01_qwen3_vl_basic_hands_on.ipynb --output 01_qwen3_vl_basic_hands_on.executed.ipynb
-uv run jupyter nbconvert --to notebook --execute notebooks/02_qwen3_vl_kv_cache_hands_on.ipynb --output 02_qwen3_vl_kv_cache_hands_on.executed.ipynb
+uv run jupyter nbconvert --to notebook --execute notebooks/01_qwen35_vllm_basic_hands_on.ipynb --output 01_qwen35_vllm_basic_hands_on.executed.ipynb
+uv run jupyter nbconvert --to notebook --execute notebooks/02_qwen35_vllm_prefix_caching_hands_on.ipynb --output 02_qwen35_vllm_prefix_caching_hands_on.executed.ipynb
 ```
 
+---
+
+## vLLM における KV cache の考え方
+
+Transformers では `past_key_values` を手で持ち回すことが多いですが、vLLM では通常、**Automatic Prefix Caching (APC)** を使うのが自然です。
+
+今回の構成では:
+
+- 同じ画像
+- 同じ chat template の先頭部分
+- 少しだけ異なる後続の質問
+
+という構成にしており、vLLM が共有prefixを自動検出して再利用します。
+
+つまり実務上は、**vLLM で Qwen3.5 マルチモーダルの KV cache を使いたいなら、まず APC を使う** のが第一選択です。
+
+---
+
 ## 追加した主なパッケージ
+
+通常環境側:
 
 - `torch`
 - `torchvision`
@@ -92,33 +203,52 @@ uv run jupyter nbconvert --to notebook --execute notebooks/02_qwen3_vl_kv_cache_
 - `matplotlib`
 - `sentencepiece`
 
+vLLM 環境側:
+
+- `vllm`
+- CUDA 13 対応 PyTorch nightly
+- `triton`
+- `openai`
+
+---
+
 ## GPU / CUDA 前提
 
-このコンテナでは `nvidia-smi` は見えていましたが、今回 `torch.cuda.is_available()` は `False` でした。
-そのため、**実行確認はCPUで行っています**。
+今回の環境では:
 
-想定としては以下です。
+- `nvidia-smi` は正常
+- `torch.cuda.is_available()` は最終的に `True`
+- Qwen3.5 を GPU 上で動作確認済み
 
-- GPUが使える環境なら `device="cuda"` でより実用的な速度になります
-- CPUでも動作確認は可能ですが、特にKV cacheデモのprefillは遅くなります
-- 大きいモデルを使う場合はGPU推奨です
+ただし、**GB10 + CUDA 13 + arm64** は現時点でかなり新しい組み合わせであり、既製wheelだけでは整わず、vLLM は source build ベースでの調整が必要でした。
+
+---
 
 ## 既知の制約
 
-- 現在の検証は `Qwen/Qwen3-VL-2B-Instruct` ベースです
-- より大きい `4B` / `8B` モデルは、GPUメモリやCUDA対応状況に強く依存します
-- CPU実行ではNotebook完走に時間がかかります
-- Hugging Face未認証アクセスのため、環境によってはダウンロード制限がかかる場合があります
-- `KV cache` 実装は「**同じ画像を含む共有prefixを複数質問で再利用する**」ケースに焦点を当てています
+- vLLM 初期化や実行中に **FlashAttention 系の警告 / FATAL 文字列** が大量に出ることがあります
+- それでも今回の環境では、**実際の生成と APC の速度改善は確認済み** です
+- vLLM 環境はかなり環境依存です
+- Notebook の executed 版はサイズが大きくなります
+
+---
 
 ## 参考にした主な情報源
 
-- Hugging Face: `Qwen/Qwen3-VL-2B-Instruct`
-- Hugging Face: `Qwen/Qwen3-VL-4B-Instruct`
-- QwenLM / Qwen3-VL GitHub repository
-- Hugging Face Transformers KV cache guide
+- Hugging Face: `Qwen/Qwen3.5-2B`
+- Hugging Face Transformers docs / `qwen3_5`
+- vLLM multimodal input docs
+- vLLM automatic prefix caching docs
+- vLLM Qwen3.5 recipes
 
-## 補足
+---
 
-Notebookは説明重視、`scripts/` は再利用重視で作っています。
-学習目的ならNotebook、組み込みや自動化の出発点としては `scripts/` を使うのがおすすめです。
+## まとめ
+
+このリポジトリで分かることはシンプルです。
+
+- **Qwen3.5 は `-VL` なしでマルチモーダル**
+- **vLLM + GPU で Qwen3.5 の画像 + テキスト推論ができる**
+- **画像を含む共有prefixでも APC が効き、後続リクエストが大きく高速化する**
+
+学習用には Notebook、実運用の出発点としては `scripts/` を使うのがおすすめです。
