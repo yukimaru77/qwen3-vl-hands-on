@@ -3,7 +3,7 @@ name = "qwen3-vl-hands-on"
 version = "0.1.0"
 description = "Hands-on notebooks and runnable scripts for Qwen3-VL basic multimodal inference and KV cache reuse"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "accelerate>=1.10",
     "ipykernel>=6.29",
@@ -13,8 +13,9 @@ dependencies = [
     "qwen-vl-utils>=0.0.14",
     "requests>=2.32",
     "sentencepiece>=0.2",
-    "torch>=2.7",
-    "torchvision>=0.22",
+    "torch @ https://download-r2.pytorch.org/whl/nightly/cu130/torch-2.12.0.dev20260310%2Bcu130-cp312-cp312-manylinux_2_28_aarch64.whl",
+    "torchvision @ https://download-r2.pytorch.org/whl/nightly/cu130/torchvision-0.26.0.dev20260311%2Bcu130-cp312-cp312-manylinux_2_28_aarch64.whl",
+    "triton @ https://download-r2.pytorch.org/whl/nightly/triton-3.6.0%2Bgit9844da95-cp312-cp312-linux_aarch64.whl ; sys_platform == 'linux' and platform_machine == 'aarch64'",
     "transformers",
 ]
 
