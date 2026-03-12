@@ -83,6 +83,14 @@ Qwen3.5 の **マルチモーダル推論（画像 + テキスト）** を、**v
 - GPU: NVIDIA GB10
 - CUDA: 13.0
 - パッケージ管理: `uv`
+- コンテナのベースイメージ系統: **NVIDIA CUDA 13.0 系 / Ubuntu 24.04 系**
+
+今回こちらで確認できた情報:
+- `PRETTY_NAME="Ubuntu 24.04.3 LTS"`
+- `CUDA_VERSION=13.0.1`
+- `NVIDIA_PRODUCT_NAME=CUDA`
+
+> 正確な元イメージ名タグまではコンテナ内から断定できませんでしたが、少なくとも **NVIDIA 検証済みの CUDA 13.0 + Ubuntu 24.04 系ベース** で動いています。
 
 ### Python 環境の使い分け
 
