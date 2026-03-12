@@ -1,0 +1,22 @@
+[project]
+name = "qwen3-vl-hands-on"
+version = "0.1.0"
+description = "Hands-on notebooks and runnable scripts for Qwen3-VL basic multimodal inference and KV cache reuse"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "accelerate>=1.10",
+    "ipykernel>=6.29",
+    "jupyter>=1.1",
+    "matplotlib>=3.10",
+    "pillow>=11.0",
+    "qwen-vl-utils>=0.0.14",
+    "requests>=2.32",
+    "sentencepiece>=0.2",
+    "torch>=2.7",
+    "torchvision>=0.22",
+    "transformers",
+]
+
+[tool.uv.sources]
+transformers = { git = "https://github.com/huggingface/transformers" }
